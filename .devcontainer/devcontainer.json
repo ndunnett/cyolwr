@@ -1,0 +1,34 @@
+{
+  "build": {
+    "dockerfile": "Dockerfile",
+    "args": {
+      "USERNAME": "dev",
+      "REPO": "/ws"
+    }
+  },
+  "remoteUser": "dev",
+  "postCreateCommand": {
+    "clean": [
+      "cargo",
+      "clean"
+    ],
+    "fetch": [
+      "cargo",
+      "fetch"
+    ]
+  },
+  "mounts": [
+    "source=${localWorkspaceFolder},target=/ws,type=bind,consistency=cached"
+  ],
+  "workspaceFolder": "/ws",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "rust-lang.rust-analyzer",
+        "tamasfe.even-better-toml",
+        "fill-labs.dependi",
+        "pest.pest-ide-tools"
+      ]
+    }
+  }
+}

@@ -1,0 +1,14 @@
+cargo-features = ["profile-rustflags"]
+
+[workspace]
+default-members = ["crates/calculator"]
+members = ["crates/*"]
+resolver = "3"
+
+[profile.dev.package."*"]
+codegen-units = 1
+opt-level = 2
+rustflags = ["-C", "target-cpu=native"]
+
+[profile.release]
+rustflags = ["-C", "target-cpu=native"]
