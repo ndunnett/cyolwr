@@ -4,6 +4,9 @@ version = "0.1.0"
 description = "A simple calculator language for learning compiler basics"
 edition = "2024"
 
+[lints]
+workspace = true
+
 [dependencies]
 pest = "2.8.5"
 pest_derive = "2.8.5"
