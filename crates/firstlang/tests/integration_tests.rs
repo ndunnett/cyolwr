@@ -282,7 +282,7 @@ fn test_function_with_parameters() {
             }
             add(3, 4)
         ",
-        expected: Value::Int(42),
+        expected: Value::Int(7),
     }]);
 }
 
