@@ -3,7 +3,12 @@
 //! These tests demonstrate the full capabilities of Firstlang
 //! and serve as examples for the book.
 
-use firstlang::{Value, run};
+use firstlang::{Anyhow, Interpreter, Value, parse};
+
+fn run(source: &str) -> Anyhow<Value> {
+    let program = parse(source)?;
+    Interpreter::new().run(&program)
+}
 
 /// Construct a test case with a given source code and expected result.
 /// The `Err` case must contain the expected string in the display formatted error, case insensitive.

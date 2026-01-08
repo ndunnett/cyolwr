@@ -1,6 +1,6 @@
 use std::io::{BufRead, Write};
 
-use firstlang::{Anyhow, run};
+use firstlang::{Anyhow, Interpreter, parse};
 
 struct Editor {
     buffer: String,
@@ -68,21 +68,26 @@ fn main() -> Anyhow<()> {
     if let Some(path) = std::env::args().nth(1) {
         // Run the file at the given path (first argument) as a script
         let source = std::fs::read_to_string(path)?;
-        let value = run(&source)?;
+        let program = parse(&source)?;
+        let value = Interpreter::new().run(&program)?;
         println!("{value}");
     } else {
         // Start the REPL
         println!("Firstlang REPL v0.1.0\nType expressions to evaluate, or 'quit' to exit.\n");
         let mut editor = Editor::new();
+        let mut interpreter = Interpreter::new();
 
         loop {
             match editor.prompt()? {
                 "" => {}
                 "quit" | "exit" | "\n" => break,
-                input => {
-                    let value = run(input)?;
-                    println!("{value}");
-                }
+                input => match parse(input) {
+                    Ok(program) => match interpreter.run(&program) {
+                        Ok(value) => println!("{value}"),
+                        Err(e) => eprintln!("Runtime error: {e}"),
+                    },
+                    Err(e) => eprintln!("Parse error: {e}"),
+                },
             }
         }
     }
