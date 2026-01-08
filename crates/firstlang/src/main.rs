@@ -46,7 +46,7 @@ impl Editor {
         depth
     }
 
-    /// Runs an interactive prompt, returning the input. Inputs are trimmed of trailing new lines; an input of `\n` denotes EOF.
+    /// Runs an interactive prompt, returning the input. Inputs are trimmed; an input of `\n` denotes EOF.
     pub fn prompt(&mut self) -> Anyhow<&str> {
         self.buffer.clear();
 
@@ -60,7 +60,7 @@ impl Editor {
             }
         }
 
-        Ok(self.buffer.trim_ascii_end())
+        Ok(self.buffer.trim())
     }
 }
 
