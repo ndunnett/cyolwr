@@ -370,6 +370,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "secondlang"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "inkwell",
+ "pest",
+ "pest_derive",
+]
+
+[[package]]
 name = "semver"
 version = "1.0.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"

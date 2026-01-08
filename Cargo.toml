@@ -1,7 +1,7 @@
 cargo-features = ["profile-rustflags"]
 
 [workspace]
-default-members = ["crates/firstlang"]
+default-members = ["crates/secondlang"]
 members = ["crates/*"]
 resolver = "3"
 
