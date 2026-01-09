@@ -541,6 +541,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "thirdlang"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "inkwell",
+ "pest",
+ "pest_derive",
+]
+
+[[package]]
 name = "thiserror"
 version = "2.0.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"

@@ -1,0 +1,22 @@
+[package]
+name = "thirdlang"
+version = "0.1.0"
+description = "An object-oriented programming language with classes, methods, and explicit memory management"
+edition = "2024"
+
+[lints]
+workspace = true
+
+[dependencies]
+anyhow = { workspace = true }
+inkwell = { workspace = true }
+pest = { workspace = true }
+pest_derive = { workspace = true }
+clap = { version = "4.5.54", features = ["derive"] }
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "thirdlang"
+path = "src/main.rs"
