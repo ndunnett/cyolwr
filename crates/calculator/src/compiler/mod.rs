@@ -20,6 +20,9 @@ mod tree_walk;
 #[cfg(feature = "jit_llvm")]
 mod jit_llvm;
 
+#[cfg(feature = "jit_cranelift")]
+mod jit_cranelift;
+
 #[cfg(feature = "bytecode")]
 mod bytecode;
 #[cfg(feature = "bytecode")]
@@ -28,7 +31,10 @@ mod opcode;
 mod vm;
 
 cfg_if::cfg_if! {
-    if #[cfg(feature = "jit_llvm")] {
+    if #[cfg(feature = "jit_cranelift")] {
+        pub use jit_cranelift::Jit as Engine;
+    }
+    else if #[cfg(feature = "jit_llvm")] {
         pub use jit_llvm::Jit as Engine;
     }
     else if #[cfg(feature = "bytecode")] {

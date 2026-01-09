@@ -9,7 +9,11 @@ workspace = true
 
 [dependencies]
 anyhow = { workspace = true }
-inkwell = { workspace = true, optional = true}
+cranelift = { workspace = true, optional = true }
+cranelift-jit = { workspace = true, optional = true }
+cranelift-module = { workspace = true, optional = true }
+cranelift-native = { workspace = true, optional = true }
+inkwell = { workspace = true, optional = true }
 pest = { workspace = true }
 pest_derive = { workspace = true }
 rustyline = "17.0.2"
@@ -27,8 +31,15 @@ test = false
 tree_walk = []
 bytecode = []
 jit_llvm = ["inkwell"]
+jit_cranelift = [
+    "cranelift",
+    "cranelift-jit",
+    "cranelift-module",
+    "cranelift-native",
+]
 
 # Uncomment for rustanalyzer to work on a specific feature
 # default = ["tree_walk"]
 # default = ["bytecode"]
-default = ["jit_llvm"]
+# default = ["jit_llvm"]
+default = ["jit_cranelift"]

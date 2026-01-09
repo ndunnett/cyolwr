@@ -10,6 +10,10 @@ pest = "2.8.5"
 pest_derive = "2.8.5"
 anyhow = "1.0.100"
 inkwell = { version = "0.8.0", features = ["llvm21-1"] }
+cranelift = { version = "0.127.1" }
+cranelift-jit = { version = "0.127.1" }
+cranelift-module = { version = "0.127.1" }
+cranelift-native = { version = "0.127.1" }
 
 [workspace.lints.rust]
 unused_must_use = "deny"
