@@ -8,4 +8,4 @@ mod visitor;
 pub type Anyhow<T> = anyhow::Result<T>;
 pub use anyhow::anyhow;
 
-pub use crate::{parser::parse, types::Type};
+pub use crate::{parser::parse, types::Type, typing::typecheck};

@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use clap::Parser;
 
-use secondlang::{Anyhow, parse};
+use secondlang::{Anyhow, parse, typecheck};
 
 const ABOUT: &str = "Secondlang Compiler";
 const LONG_ABOUT: &str = r"Secondlang Compiler
@@ -34,7 +34,8 @@ pub struct Args {
 fn main() -> Anyhow<()> {
     let args = Args::parse();
     let source = std::fs::read_to_string(args.path)?;
-    let program = parse(&source)?;
+    let mut program = parse(&source)?;
+    typecheck(&mut program)?;
 
     if args.check {
         println!("Type check passed!");
