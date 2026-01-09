@@ -10,5 +10,10 @@ pub type Anyhow<T> = anyhow::Result<T>;
 pub use anyhow::anyhow;
 
 pub use crate::{
-    optimizer::optimize, parser::parse, types::Type, typing::typecheck, visitor::Visitor,
+    codegen::{compile, create_context},
+    optimizer::optimize,
+    parser::parse,
+    types::Type,
+    typing::typecheck,
+    visitor::Visitor,
 };

@@ -3,60 +3,74 @@
 //! These tests verify the full compilation pipeline:
 //! parsing -> type checking -> LLVM codegen -> JIT execution
 
-use secondlang::{compile_to_ir, parse, run, typecheck};
+use secondlang::{Anyhow, ast::Program, compile, create_context, optimize, parse, typecheck};
 
 // =============================================================================
 // Type Checking Tests
 // =============================================================================
 
-fn typecheck_source(source: &str) -> Result<(), String> {
+fn typecheck_source(source: &str) -> Anyhow<Program> {
     let mut program = parse(source)?;
-    typecheck(&mut program)
+    typecheck(&mut program)?;
+    Ok(optimize(program))
+}
+
+fn ir_string(source: &str) -> Anyhow<String> {
+    let program = typecheck_source(source)?;
+    let ctx = create_context();
+    let module = compile(&ctx, &program, "test")?;
+    Ok(module.to_string())
+}
+
+fn execute(source: &str) -> Anyhow<i64> {
+    let program = typecheck_source(source)?;
+    let ctx = create_context();
+    let module = compile(&ctx, &program, "test")?;
+    module.execute()
 }
 
 #[test]
 fn test_typecheck_literals() {
-    typecheck_source("42").unwrap();
-    typecheck_source("true").unwrap();
-    typecheck_source("false").unwrap();
+    assert!(typecheck_source("42").is_ok());
+    assert!(typecheck_source("true").is_ok());
+    assert!(typecheck_source("false").is_ok());
 }
 
 #[test]
 fn test_typecheck_arithmetic() {
-    typecheck_source("1 + 2").unwrap();
-    typecheck_source("10 - 5").unwrap();
-    typecheck_source("3 * 4").unwrap();
-    typecheck_source("20 / 4").unwrap();
+    assert!(typecheck_source("1 + 2").is_ok());
+    assert!(typecheck_source("10 - 5").is_ok());
+    assert!(typecheck_source("3 * 4").is_ok());
+    assert!(typecheck_source("20 / 4").is_ok());
 }
 
 #[test]
 fn test_typecheck_comparison() {
-    typecheck_source("1 < 2").unwrap();
-    typecheck_source("1 > 2").unwrap();
-    typecheck_source("1 == 1").unwrap();
-    typecheck_source("1 != 2").unwrap();
+    assert!(typecheck_source("1 < 2").is_ok());
+    assert!(typecheck_source("1 > 2").is_ok());
+    assert!(typecheck_source("1 == 1").is_ok());
+    assert!(typecheck_source("1 != 2").is_ok());
 }
 
 #[test]
 fn test_typecheck_type_error_arithmetic() {
-    let result = typecheck_source("1 + true");
-    assert!(result.is_err());
+    assert!(typecheck_source("1 + true").is_err());
 }
 
 #[test]
 fn test_typecheck_typed_function() {
-    let source = r#"
+    let source = r"
         def add(a: int, b: int) -> int {
             return a + b
         }
         add(1, 2)
-    "#;
-    typecheck_source(source).unwrap();
+    ";
+    assert!(typecheck_source(source).is_ok());
 }
 
 #[test]
 fn test_typecheck_fibonacci() {
-    let source = r#"
+    let source = r"
         def fib(n: int) -> int {
             if (n < 2) {
                 return n
@@ -65,20 +79,19 @@ fn test_typecheck_fibonacci() {
             }
         }
         fib(10)
-    "#;
-    typecheck_source(source).unwrap();
+    ";
+    assert!(typecheck_source(source).is_ok());
 }
 
 #[test]
 fn test_typecheck_wrong_argument_type() {
-    let source = r#"
+    let source = r"
         def add(a: int, b: int) -> int {
             return a + b
         }
         add(1, true)
-    "#;
-    let result = typecheck_source(source);
-    assert!(result.is_err());
+    ";
+    assert!(typecheck_source(source).is_err());
 }
 
 // =============================================================================
@@ -87,33 +100,33 @@ fn test_typecheck_wrong_argument_type() {
 
 #[test]
 fn test_compile_simple() {
-    let source = r#"
+    let source = r"
         def answer() -> int {
             return 42
         }
         answer()
-    "#;
-    let ir = compile_to_ir(source).unwrap();
+    ";
+    let ir = ir_string(source).unwrap();
     assert!(ir.contains("define i64 @answer"));
     assert!(ir.contains("ret i64 42"));
 }
 
 #[test]
 fn test_compile_add() {
-    let source = r#"
+    let source = r"
         def add(a: int, b: int) -> int {
             return a + b
         }
         add(3, 4)
-    "#;
-    let ir = compile_to_ir(source).unwrap();
+    ";
+    let ir = ir_string(source).unwrap();
     assert!(ir.contains("define i64 @add"));
     assert!(ir.contains("add"));
 }
 
 #[test]
 fn test_compile_fibonacci() {
-    let source = r#"
+    let source = r"
         def fib(n: int) -> int {
             if (n < 2) {
                 return n
@@ -122,8 +135,8 @@ fn test_compile_fibonacci() {
             }
         }
         fib(10)
-    "#;
-    let ir = compile_to_ir(source).unwrap();
+    ";
+    let ir = ir_string(source).unwrap();
     assert!(ir.contains("define i64 @fib"));
     assert!(ir.contains("call i64 @fib")); // Recursive call
 }
@@ -134,40 +147,40 @@ fn test_compile_fibonacci() {
 
 #[test]
 fn test_jit_simple() {
-    let source = r#"
+    let source = r"
         def answer() -> int {
             return 42
         }
         answer()
-    "#;
-    assert_eq!(run(source).unwrap(), 42);
+    ";
+    assert_eq!(execute(source).unwrap(), 42);
 }
 
 #[test]
 fn test_jit_arithmetic() {
-    let source = r#"
+    let source = r"
         def compute() -> int {
             return 2 + 3 * 4
         }
         compute()
-    "#;
-    assert_eq!(run(source).unwrap(), 14);
+    ";
+    assert_eq!(execute(source).unwrap(), 14);
 }
 
 #[test]
 fn test_jit_add() {
-    let source = r#"
+    let source = r"
         def add(a: int, b: int) -> int {
             return a + b
         }
         add(3, 4)
-    "#;
-    assert_eq!(run(source).unwrap(), 7);
+    ";
+    assert_eq!(execute(source).unwrap(), 7);
 }
 
 #[test]
 fn test_jit_conditional() {
-    let source = r#"
+    let source = r"
         def max(a: int, b: int) -> int {
             if (a > b) {
                 return a
@@ -176,13 +189,13 @@ fn test_jit_conditional() {
             }
         }
         max(10, 20)
-    "#;
-    assert_eq!(run(source).unwrap(), 20);
+    ";
+    assert_eq!(execute(source).unwrap(), 20);
 }
 
 #[test]
 fn test_jit_while_loop() {
-    let source = r#"
+    let source = r"
         def sum_to(n: int) -> int {
             result: int = 0
             i: int = 1
@@ -193,13 +206,13 @@ fn test_jit_while_loop() {
             return result
         }
         sum_to(10)
-    "#;
-    assert_eq!(run(source).unwrap(), 55);
+    ";
+    assert_eq!(execute(source).unwrap(), 55);
 }
 
 #[test]
 fn test_jit_factorial_recursive() {
-    let source = r#"
+    let source = r"
         def factorial(n: int) -> int {
             if (n <= 1) {
                 return 1
@@ -208,13 +221,13 @@ fn test_jit_factorial_recursive() {
             }
         }
         factorial(5)
-    "#;
-    assert_eq!(run(source).unwrap(), 120);
+    ";
+    assert_eq!(execute(source).unwrap(), 120);
 }
 
 #[test]
 fn test_jit_fibonacci() {
-    let source = r#"
+    let source = r"
         def fib(n: int) -> int {
             if (n < 2) {
                 return n
@@ -223,13 +236,13 @@ fn test_jit_fibonacci() {
             }
         }
         fib(10)
-    "#;
-    assert_eq!(run(source).unwrap(), 55);
+    ";
+    assert_eq!(execute(source).unwrap(), 55);
 }
 
 #[test]
 fn test_jit_fibonacci_larger() {
-    let source = r#"
+    let source = r"
         def fib(n: int) -> int {
             if (n < 2) {
                 return n
@@ -238,13 +251,13 @@ fn test_jit_fibonacci_larger() {
             }
         }
         fib(20)
-    "#;
-    assert_eq!(run(source).unwrap(), 6765);
+    ";
+    assert_eq!(execute(source).unwrap(), 6765);
 }
 
 #[test]
 fn test_jit_multiple_functions() {
-    let source = r#"
+    let source = r"
         def double(x: int) -> int {
             return x * 2
         }
@@ -252,13 +265,13 @@ fn test_jit_multiple_functions() {
             return double(double(x))
         }
         quadruple(5)
-    "#;
-    assert_eq!(run(source).unwrap(), 20);
+    ";
+    assert_eq!(execute(source).unwrap(), 20);
 }
 
 #[test]
 fn test_jit_gcd() {
-    let source = r#"
+    let source = r"
         def gcd(a: int, b: int) -> int {
             while (b != 0) {
                 temp: int = b
@@ -268,13 +281,13 @@ fn test_jit_gcd() {
             return a
         }
         gcd(48, 18)
-    "#;
-    assert_eq!(run(source).unwrap(), 6);
+    ";
+    assert_eq!(execute(source).unwrap(), 6);
 }
 
 #[test]
 fn test_jit_power() {
-    let source = r#"
+    let source = r"
         def power(base: int, exp: int) -> int {
             if (exp == 0) {
                 return 1
@@ -283,6 +296,6 @@ fn test_jit_power() {
             }
         }
         power(2, 10)
-    "#;
-    assert_eq!(run(source).unwrap(), 1024);
+    ";
+    assert_eq!(execute(source).unwrap(), 1024);
 }
