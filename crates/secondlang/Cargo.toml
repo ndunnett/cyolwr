@@ -8,11 +8,11 @@ edition = "2024"
 workspace = true
 
 [dependencies]
-pest = "2.8.5"
-pest_derive = "2.8.5"
-anyhow = "1.0.100"
+anyhow = { workspace = true }
+inkwell = { workspace = true }
+pest = { workspace = true }
+pest_derive = { workspace = true }
 clap = { version = "4.5.54", features = ["derive"] }
-inkwell = { version = "0.7.1", features = ["llvm21-1"] }
 
 [lib]
 path = "src/lib.rs"
