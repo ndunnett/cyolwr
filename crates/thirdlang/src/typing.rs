@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::{
     Anyhow, anyhow,
     ast::{
-        AssignTarget, BinaryOp, ClassDef, Expression, FieldDef, MethodDef, Program, Statement,
+        AssignTarget, BinaryOp, ClassDef, Expression, MethodDef, Program, Statement,
         TopLevel, TypedExpr, UnaryOp,
     },
     types::{ClassInfo, ClassRegistry, MethodInfo, Type},
@@ -425,7 +425,7 @@ impl TypingEngine {
         }
 
         let return_type = info.return_type.clone();
-        let mut params = info.params.clone().into_iter().map(|p| p.1);
+        let params = info.params.clone().into_iter().map(|p| p.1);
 
         for (arg, ty) in args.iter_mut().zip(params) {
             self.expression(arg)?;
@@ -471,7 +471,7 @@ impl TypingEngine {
                 ));
             }
 
-            let mut params = ctor.params.clone().into_iter().map(|p| p.1);
+            let params = ctor.params.clone().into_iter().map(|p| p.1);
 
             for (arg, ty) in args.iter_mut().zip(params) {
                 self.expression(arg)?;
