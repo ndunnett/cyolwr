@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use clap::Parser;
 
-use thirdlang::Anyhow;
+use thirdlang::{Anyhow, compile, create_context, optimize, parse, typecheck};
 
 const ABOUT: &str = "Thirdlang Compiler";
 const LONG_ABOUT: &str = r"Thirdlang Compiler
@@ -47,13 +47,48 @@ pub struct Args {
     #[arg(short = 'O', long)]
     optimize: bool,
     /// Custom passes
-    #[arg(long, default_value = "dce,mem2reg,instcombine,simplifycfg")]
-    passes: String,
+    #[arg(long)]
+    passes: Option<String>,
 }
 
 fn main() -> Anyhow<()> {
     let args = Args::parse();
     let source = std::fs::read_to_string(&args.path)?;
-    println!("{source}");
+    let mut program = parse(&source)?;
+    let classes = typecheck(&mut program)?;
+
+    if args.optimize {
+        program = optimize(program);
+    }
+
+    if args.check {
+        println!("Type check passed!");
+    } else if args.ast {
+        println!("{program:#?}");
+    } else {
+        let name = args
+            .path
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("unknown");
+
+        let passes = if args.optimize {
+            args.passes
+                .as_deref()
+                .or(Some("default<O2>"))
+        } else {
+            None
+        };
+
+        let ctx = create_context();
+        let module = compile(&ctx, &program, classes, name, passes)?;
+
+        if args.ir {
+            println!("{module}");
+        } else {
+            println!("{}", module.execute()?);
+        }
+    }
+
     Ok(())
 }
