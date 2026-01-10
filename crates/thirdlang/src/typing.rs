@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use crate::{
     Anyhow, anyhow,
     ast::{
-        AssignTarget, BinaryOp, ClassDef, Expression, MethodDef, Program, Statement,
-        TopLevel, TypedExpr, UnaryOp,
+        AssignTarget, BinaryOp, ClassDef, Expression, MethodDef, Program, Statement, TopLevel,
+        TypedExpr, UnaryOp,
     },
     types::{ClassInfo, ClassRegistry, MethodInfo, Type},
 };
@@ -54,7 +54,7 @@ impl TypingEngine {
 
     fn validate_type(&self, ty: &Type) -> Anyhow<()> {
         if let Type::Class(name) = ty
-            && self.lookup_type(name).is_none()
+            && !self.classes.contains_key(name)
         {
             Err(anyhow!("unknown class: {name}"))
         } else {
