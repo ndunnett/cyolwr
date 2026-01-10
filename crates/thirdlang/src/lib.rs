@@ -8,3 +8,5 @@ mod visitor;
 
 pub type Anyhow<T> = anyhow::Result<T>;
 pub use anyhow::anyhow;
+
+pub use crate::{optimizer::optimize, parser::parse, typing::typecheck, visitor::Visitor};
