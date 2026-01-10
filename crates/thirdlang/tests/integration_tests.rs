@@ -3,7 +3,42 @@
 //! These tests verify the full compilation pipeline:
 //! parsing -> type checking -> LLVM codegen -> JIT execution
 
-use thirdlang::{compile_to_ir, parse, run, run_optimized, typecheck};
+use inkwell::context::Context;
+
+use thirdlang::{Anyhow, IrModule, compile, create_context, optimize, parse, typecheck};
+
+fn test_compile<'ctx>(
+    ctx: &'ctx Context,
+    source: &str,
+    passes: Option<&str>,
+) -> Anyhow<IrModule<'ctx>> {
+    let mut program = parse(source)?;
+    let classes = typecheck(&mut program)?;
+    let program = optimize(program);
+    compile(ctx, &program, classes, "test", passes)
+}
+
+fn compile_to_ir_with_opts(source: &str, passes: Option<&str>) -> Anyhow<String> {
+    let ctx = create_context();
+    let module = test_compile(&ctx, source, passes)?;
+    Ok(module.to_string())
+}
+
+fn compile_to_ir(source: &str) -> Anyhow<String> {
+    compile_to_ir_with_opts(source, None)
+}
+
+fn run_optimized(source: &str, passes: &str) -> Anyhow<i64> {
+    let ctx = create_context();
+    let module = test_compile(&ctx, source, Some(passes))?;
+    module.execute()
+}
+
+fn run(source: &str) -> Anyhow<i64> {
+    let ctx = create_context();
+    let module = test_compile(&ctx, source, None)?;
+    module.execute()
+}
 
 // =============================================================================
 // Parsing Tests
@@ -11,18 +46,18 @@ use thirdlang::{compile_to_ir, parse, run, run_optimized, typecheck};
 
 #[test]
 fn test_parse_class() {
-    let source = r#"
+    let source = r"
         class Point {
             x: int
             y: int
         }
-    "#;
+    ";
     parse(source).unwrap();
 }
 
 #[test]
 fn test_parse_class_with_methods() {
-    let source = r#"
+    let source = r"
         class Point {
             x: int
 
@@ -34,17 +69,17 @@ fn test_parse_class_with_methods() {
                 return self.x
             }
         }
-    "#;
+    ";
     parse(source).unwrap();
 }
 
 #[test]
 fn test_parse_new_delete() {
-    let source = r#"
+    let source = r"
         class Point { x: int }
         p = new Point()
         delete p
-    "#;
+    ";
     parse(source).unwrap();
 }
 
@@ -52,7 +87,7 @@ fn test_parse_new_delete() {
 // Type Checking Tests
 // =============================================================================
 
-fn typecheck_source(source: &str) -> Result<(), String> {
+fn typecheck_source(source: &str) -> Anyhow<()> {
     let mut program = parse(source)?;
     typecheck(&mut program)?;
     Ok(())
@@ -60,7 +95,7 @@ fn typecheck_source(source: &str) -> Result<(), String> {
 
 #[test]
 fn test_typecheck_class() {
-    let source = r#"
+    let source = r"
         class Point {
             x: int
             y: int
@@ -70,85 +105,85 @@ fn test_typecheck_class() {
                 self.y = y
             }
         }
-    "#;
+    ";
     typecheck_source(source).unwrap();
 }
 
 #[test]
 fn test_typecheck_method_call() {
-    let source = r#"
+    let source = r"
         class Counter {
             value: int
             def get(self) -> int { return self.value }
         }
         c = new Counter()
         c.get()
-    "#;
+    ";
     typecheck_source(source).unwrap();
 }
 
 #[test]
 fn test_typecheck_field_access() {
-    let source = r#"
+    let source = r"
         class Point {
             x: int
             def __init__(self, x: int) { self.x = x }
         }
         p = new Point(42)
         p.x
-    "#;
+    ";
     typecheck_source(source).unwrap();
 }
 
 #[test]
 fn test_typecheck_wrong_constructor_args() {
-    let source = r#"
+    let source = r"
         class Point {
             x: int
             def __init__(self, x: int) { self.x = x }
         }
         p = new Point(true)
-    "#;
+    ";
     assert!(typecheck_source(source).is_err());
 }
 
 #[test]
 fn test_typecheck_wrong_field_type() {
-    let source = r#"
+    let source = r"
         class Point {
             x: int
             def __init__(self) { self.x = true }
         }
-    "#;
+    ";
     assert!(typecheck_source(source).is_err());
 }
 
 #[test]
 fn test_typecheck_unknown_field() {
-    let source = r#"
+    let source = r"
         class Point { x: int }
         p = new Point()
         p.y
-    "#;
+    ";
     assert!(typecheck_source(source).is_err());
 }
 
 #[test]
 fn test_typecheck_unknown_method() {
-    let source = r#"
+    let source = r"
         class Point { x: int }
         p = new Point()
         p.foo()
-    "#;
+    ";
     assert!(typecheck_source(source).is_err());
 }
 
 #[test]
 fn test_typecheck_delete_non_class() {
-    let source = r#"
+    let source = r"
         x: int = 42
         delete x
-    "#;
+    ";
     assert!(typecheck_source(source).is_err());
 }
 
@@ -158,7 +193,7 @@ fn test_typecheck_delete_non_class() {
 
 #[test]
 fn test_compile_simple_class() {
-    let source = r#"
+    let source = r"
         class Point {
             x: int
             def __init__(self, x: int) { self.x = x }
@@ -166,7 +201,7 @@ fn test_compile_simple_class() {
         }
         p = new Point(42)
         p.get_x()
-    "#;
+    ";
     let ir = compile_to_ir(source).unwrap();
     assert!(ir.contains("Point____init__"));
     assert!(ir.contains("Point__get_x"));
@@ -175,12 +210,12 @@ fn test_compile_simple_class() {
 
 #[test]
 fn test_compile_delete() {
-    let source = r#"
+    let source = r"
         class Point { x: int }
         p = new Point()
         delete p
         42
-    "#;
+    ";
     let ir = compile_to_ir(source).unwrap();
     assert!(ir.contains("@free"));
 }
@@ -192,7 +227,7 @@ fn test_compile_delete() {
 // ANCHOR: test_simple_class
 #[test]
 fn test_jit_simple_class() {
-    let source = r#"
+    let source = r"
         class Point {
             x: int
             def __init__(self, x: int) { self.x = x }
@@ -202,14 +237,14 @@ fn test_jit_simple_class() {
         result = p.get_x()
         delete p
         result
-    "#;
+    ";
     assert_eq!(run(source).unwrap(), 42);
 }
 // ANCHOR_END: test_simple_class
 
 #[test]
 fn test_jit_counter() {
-    let source = r#"
+    let source = r"
         class Counter {
             value: int
 
@@ -234,13 +269,13 @@ fn test_jit_counter() {
         result = c.get()
         delete c
         result
-    "#;
+    ";
     assert_eq!(run(source).unwrap(), 13);
 }
 
 #[test]
 fn test_jit_point_distance() {
-    let source = r#"
+    let source = r"
         class Point {
             x: int
             y: int
@@ -263,13 +298,13 @@ fn test_jit_point_distance() {
         delete p1
         delete p2
         result
-    "#;
+    ";
     assert_eq!(run(source).unwrap(), 25);
 }
 
 #[test]
 fn test_jit_multiple_objects() {
-    let source = r#"
+    let source = r"
         class Box {
             value: int
             def __init__(self, v: int) { self.value = v }
@@ -287,13 +322,13 @@ fn test_jit_multiple_objects() {
         delete b3
 
         sum
-    "#;
+    ";
     assert_eq!(run(source).unwrap(), 60);
 }
 
 #[test]
 fn test_jit_destructor() {
-    let source = r#"
+    let source = r"
         class Resource {
             id: int
 
@@ -314,13 +349,13 @@ fn test_jit_destructor() {
         id = r.get_id()
         delete r
         id
-    "#;
+    ";
     assert_eq!(run(source).unwrap(), 99);
 }
 
 #[test]
 fn test_jit_method_with_args() {
-    let source = r#"
+    let source = r"
         class Calculator {
             result: int
 
@@ -346,13 +381,13 @@ fn test_jit_method_with_args() {
         result = calc.result
         delete calc
         result
-    "#;
+    ";
     assert_eq!(run(source).unwrap(), 30);
 }
 
 #[test]
 fn test_jit_conditional_in_method() {
-    let source = r#"
+    let source = r"
         class Number {
             value: int
 
@@ -373,13 +408,13 @@ fn test_jit_conditional_in_method() {
         result = n.abs()
         delete n
         result
-    "#;
+    ";
     assert_eq!(run(source).unwrap(), 42);
 }
 
 #[test]
 fn test_jit_loop_in_method() {
-    let source = r#"
+    let source = r"
         class Accumulator {
             total: int
 
@@ -401,13 +436,13 @@ fn test_jit_loop_in_method() {
         result = acc.sum_to(10)
         delete acc
         result
-    "#;
+    ";
     assert_eq!(run(source).unwrap(), 55);
 }
 
 #[test]
 fn test_jit_class_with_functions() {
-    let source = r#"
+    let source = r"
         def square(n: int) -> int {
             return n * n
         }
@@ -430,7 +465,7 @@ fn test_jit_class_with_functions() {
         result = p.magnitude_squared()
         delete p
         result
-    "#;
+    ";
     assert_eq!(run(source).unwrap(), 25);
 }
 
@@ -440,7 +475,7 @@ fn test_jit_class_with_functions() {
 
 #[test]
 fn test_run_optimized() {
-    let source = r#"
+    let source = r"
         class Counter {
             value: int
 
@@ -465,7 +500,7 @@ fn test_run_optimized() {
         result = c.get()
         delete c
         result
-    "#;
+    ";
 
     // Test without optimization
     assert_eq!(run(source).unwrap(), 3);
@@ -477,7 +512,7 @@ fn test_run_optimized() {
 #[test]
 fn test_run_optimized_with_dead_code() {
     // This test verifies DCE removes unused computations
-    let source = r#"
+    let source = r"
         class Point {
             x: int
             y: int
@@ -498,7 +533,7 @@ fn test_run_optimized_with_dead_code() {
         result = p.get_x()
         delete p
         result
-    "#;
+    ";
 
     assert_eq!(
         run_optimized(source, "dce,mem2reg,instcombine").unwrap(),
@@ -509,9 +544,7 @@ fn test_run_optimized_with_dead_code() {
 // ANCHOR: test_optimization_pipeline
 #[test]
 fn test_optimization_pipeline() {
-    use thirdlang::compile_to_ir_with_opts;
-
-    let source = r#"
+    let source = r"
         class Simple {
             value: int
 
@@ -528,7 +561,7 @@ fn test_optimization_pipeline() {
         result = s.get()
         delete s
         result
-    "#;
+    ";
 
     // Get unoptimized IR
     let unopt_ir = compile_to_ir_with_opts(source, None).unwrap();
@@ -553,7 +586,7 @@ fn test_optimization_pipeline() {
 #[test]
 fn test_default_o2_pipeline() {
     // Test the standard O2 pipeline
-    let source = r#"
+    let source = r"
         class Box {
             value: int
 
@@ -570,7 +603,7 @@ fn test_default_o2_pipeline() {
         result = b.double()
         delete b
         result
-    "#;
+    ";
 
     assert_eq!(run_optimized(source, "default<O2>").unwrap(), 42);
 }
