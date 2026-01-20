@@ -17,7 +17,7 @@ pub fn parse(source: &str) -> Anyhow<Program> {
 }
 
 #[derive(pest_derive::Parser)]
-#[grammar = "parser/grammar.pest"]
+#[grammar = "parser/pest_impl/grammar.pest"]
 struct ThirdlangParser;
 
 struct AstBuilder;

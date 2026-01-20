@@ -1,18 +1,13 @@
-#![allow(unused)]
-
-use std::{convert::identity, num::ParseIntError};
+use std::num::ParseIntError;
 
 use winnow::{
-    Result,
-    ascii::{dec_int, digit1, multispace0, till_line_ending},
+    ascii::{dec_int, multispace0, till_line_ending},
     combinator::{
-        alt, delimited, dispatch, eof, fail, not, opt, peek, preceded, repeat, separated,
-        separated_pair, seq, terminated,
+        alt, delimited, not, opt, preceded, repeat, separated, separated_pair, seq, terminated,
     },
     error::{FromExternalError, InputError, ParserError},
     prelude::*,
-    stream::{Stream, TokenSlice},
-    token::{any, literal, one_of, take_till, take_while},
+    token::{one_of, take_while},
 };
 
 use crate::{
@@ -31,7 +26,7 @@ pub fn parse(source: &str) -> Anyhow<Program> {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Keyword {
+enum Keyword {
     Def,
     If,
     Else,
@@ -46,7 +41,7 @@ pub enum Keyword {
 }
 
 impl Keyword {
-    pub const fn lexeme(self) -> &'static str {
+    const fn lexeme(self) -> &'static str {
         match self {
             Self::Def => "def",
             Self::If => "if",
@@ -62,7 +57,7 @@ impl Keyword {
         }
     }
 
-    pub fn any<'i, E: ParserError<&'i str>>(i: &mut &'i str) -> ModalResult<&'i str, E> {
+    fn any<'i, E: ParserError<&'i str>>(i: &mut &'i str) -> ModalResult<&'i str, E> {
         alt((
             Self::Def,
             Self::If,
@@ -158,7 +153,7 @@ where
         .map(|(id, body)| {
             let (fields, methods): (Vec<_>, Vec<_>) = body
                 .into_iter()
-                .partition(|item| matches!(item, ClassBodyItem::Field(field)));
+                .partition(|item| matches!(item, ClassBodyItem::Field(_)));
 
             let fields = fields
                 .into_iter()
