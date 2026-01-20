@@ -9,9 +9,10 @@ workspace = true
 
 [dependencies]
 anyhow = { workspace = true }
-inkwell = { workspace = true }
-pest = { workspace = true }
-pest_derive = { workspace = true }
+inkwell = { workspace = true, optional = true }
+pest = { workspace = true, optional = true }
+pest_derive = { workspace = true, optional = true }
+winnow = { version = "0.7.14", optional = true }
 clap = { version = "4.5.54", features = ["derive"] }
 
 [lib]
@@ -20,3 +21,12 @@ path = "src/lib.rs"
 [[bin]]
 name = "thirdlang"
 path = "src/main.rs"
+
+[features]
+pest_parser = ["pest", "pest_derive"]
+winnow_parser = ["winnow"]
+llvm_backend = ["inkwell"]
+
+# Uncomment for rustanalyzer to work on a specific feature
+# default = ["pest_parser", "llvm_backend"]
+default = ["winnow_parser", "llvm_backend"]
