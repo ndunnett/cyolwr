@@ -306,17 +306,19 @@ fn mul_op(i: &mut Tokens<'_>) -> ModalResult<BinaryOp> {
 }
 
 fn unary(i: &mut Tokens<'_>) -> ModalResult<TypedExpr> {
-    alt((
-        (unary_op, unary).map(|(op, expr)| {
-            Expression::Unary {
-                op,
-                expr: Box::new(expr),
+    (repeat(.., unary_op), postfix)
+        .map(|(ops, mut expr): (Vec<_>, _)| {
+            for op in ops {
+                expr = Expression::Unary {
+                    op,
+                    expr: Box::new(expr),
+                }
+                .untyped();
             }
-            .untyped()
-        }),
-        postfix,
-    ))
-    .parse_next(i)
+
+            expr
+        })
+        .parse_next(i)
 }
 
 fn unary_op(i: &mut Tokens<'_>) -> ModalResult<UnaryOp> {
@@ -364,20 +366,11 @@ fn field_access_op(i: &mut Tokens<'_>) -> ModalResult<(String, Option<Vec<TypedE
 
 fn field_access(i: &mut Tokens<'_>) -> ModalResult<AssignTarget> {
     (
-        (
-            alt((
-                self_keyword,
-                identifier
-                    .map(String::from)
-                    .map(|s| Expression::Var(s).untyped()),
-            )),
-            preceded(Dot, identifier),
-        ),
+        alt((self_keyword, var_expr)),
+        preceded(Dot, identifier).map(String::from),
         repeat(.., preceded(Dot, identifier)),
     )
-        .map(|((mut object, target), chain): (_, Vec<_>)| {
-            let mut field = String::from(target);
-
+        .map(|(mut object, mut field, chain): (_, _, Vec<_>)| {
             for next in chain {
                 object = Expression::FieldAccess {
                     object: Box::new(object),
@@ -414,35 +407,37 @@ fn primary(i: &mut Tokens<'_>) -> ModalResult<TypedExpr> {
 
 fn var_expr(i: &mut Tokens<'_>) -> ModalResult<TypedExpr> {
     identifier
-        .map(|id| Expression::Var(String::from(id)).untyped())
+        .map(String::from)
+        .map(Expression::Var)
+        .map(Expression::untyped)
         .parse_next(i)
 }
 
 fn new_expr(i: &mut Tokens<'_>) -> ModalResult<TypedExpr> {
-    seq!(
-        _: New,
-        identifier,
-        delimited(OpenParen, args, CloseParen))
-    .map(|(id, args)| {
+    seq! {
         Expression::New {
-            class: String::from(id),
-            args,
+            _: New,
+                class: identifier.map(String::from),
+            _: OpenParen,
+                args: args,
+            _: CloseParen
         }
-        .untyped()
-    })
+    }
+    .map(Expression::untyped)
     .parse_next(i)
 }
 
 fn function_call(i: &mut Tokens<'_>) -> ModalResult<TypedExpr> {
-    (identifier, delimited(OpenParen, args, CloseParen))
-        .map(|(id, args)| {
-            Expression::Call {
-                name: String::from(id),
-                args,
-            }
-            .untyped()
-        })
-        .parse_next(i)
+    seq! {
+        Expression::Call {
+            name: identifier.map(String::from),
+            _: OpenParen,
+            args: args,
+            _: CloseParen
+        }
+    }
+    .map(Expression::untyped)
+    .parse_next(i)
 }
 
 fn args(i: &mut Tokens<'_>) -> ModalResult<Vec<TypedExpr>> {
