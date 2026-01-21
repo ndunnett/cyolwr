@@ -2,7 +2,7 @@ use winnow::{
     Result,
     ascii::{digit1, multispace0, till_line_ending},
     combinator::{alt, not, preceded, repeat, terminated},
-    error::{ContextError, ParserError},
+    error::{ContextError, ParserError, StrContext, StrContextValue},
     prelude::*,
     stream::ContainsToken,
     token::{any, one_of, rest, take_while},
@@ -21,8 +21,12 @@ pub fn lex(source: &str) -> Anyhow<Vec<LexedToken<'_>>> {
             tokens.push(eoi);
             tokens
         })
+        .context(StrContext::Label("token stream"))
+        .context(StrContext::Expected(StrContextValue::Description(
+            "end of input",
+        )))
         .parse(source)
-        .map_err(|e| anyhow!("{e}"))
+        .map_err(|e| anyhow!("{}", e.inner()))
 }
 
 fn eoi<'i>(i: &mut &str) -> Result<LexedToken<'i>> {
