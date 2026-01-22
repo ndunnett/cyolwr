@@ -9,3 +9,8 @@ mod winnow_impl;
 
 #[cfg(feature = "winnow_parser")]
 pub use winnow_impl::parse;
+
+const _: () = {
+    #[cfg(not(any(feature = "pest_parser", feature = "winnow_parser")))]
+    panic!("no parsing feature selected")
+};

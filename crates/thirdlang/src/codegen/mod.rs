@@ -6,6 +6,11 @@ mod llvm_impl;
 #[cfg(feature = "llvm_backend")]
 pub use llvm_impl::Context;
 
+const _: () = {
+    #[cfg(not(feature = "llvm_backend"))]
+    panic!("no backend feature selected")
+};
+
 pub trait ModuleContext<'src> {
     type CodegenContext;
     type CodegenModule: CodeGenerator;
