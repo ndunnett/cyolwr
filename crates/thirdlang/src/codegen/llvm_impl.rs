@@ -960,36 +960,34 @@ impl<'ctx> Compiler<'ctx> {
     }
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use crate::{parse, typecheck};
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{parse, typecheck};
 
-//     #[test]
-//     fn test_compile_class() {
-//         let source = r"
-//             class Point {
-//                 x: int
-//                 y: int
+    #[test]
+    fn test_compile_class() {
+        let source = r"
+            class Point {
+                x: int
+                y: int
 
-//                 def __init__(self, x: int, y: int) {
-//                     self.x = x
-//                     self.y = y
-//                 }
+                def __init__(self, x: int, y: int) {
+                    self.x = x
+                    self.y = y
+                }
 
-//                 def get_x(self) -> int {
-//                     return self.x
-//                 }
-//             }
-//             p = new Point(10, 20)
-//             p.get_x()
-//         ";
+                def get_x(self) -> int {
+                    return self.x
+                }
+            }
+            p = new Point(10, 20)
+            p.get_x()
+        ";
 
-//         let mut program = parse(source).unwrap();
-//         let classes = typecheck(&mut program).unwrap();
-
-//         let context = Context::create();
-//         let codegen = CodeGen::new(&context, "test", classes);
-//         codegen.compile(&program).unwrap();
-//     }
-// }
+        let mut program = parse(source).unwrap();
+        let classes = typecheck(&mut program).unwrap();
+        let ctx = Context::new("name", classes, &program);
+        ctx.codegen().compile().unwrap();
+    }
+}
