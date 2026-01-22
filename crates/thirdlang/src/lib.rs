@@ -10,7 +10,7 @@ pub type Anyhow<T> = anyhow::Result<T>;
 pub use anyhow::anyhow;
 
 pub use crate::{
-    codegen::{IrModule, compile, create_context},
+    codegen::{CodeGenerator, Context, IntermediateRepresentation, ModuleContext},
     optimizer::optimize,
     parser::parse,
     typing::typecheck,

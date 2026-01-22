@@ -1,26 +1,19 @@
-//! Integration tests for Thirdlang
-//!
-//! These tests verify the full compilation pipeline:
-//! parsing -> type checking -> LLVM codegen -> JIT execution
+use thirdlang::{
+    Anyhow, CodeGenerator, Context, IntermediateRepresentation, ModuleContext, optimize, parse,
+    typecheck,
+};
 
-use inkwell::context::Context;
-
-use thirdlang::{Anyhow, IrModule, compile, create_context, optimize, parse, typecheck};
-
-fn test_compile<'ctx>(
-    ctx: &'ctx Context,
-    source: &str,
-    passes: Option<&str>,
-) -> Anyhow<IrModule<'ctx>> {
+fn compile_to_ir_with_opts(source: &str, passes: Option<&str>) -> Anyhow<String> {
     let mut program = parse(source)?;
     let classes = typecheck(&mut program)?;
     let program = optimize(program);
-    compile(ctx, &program, classes, "test", passes)
-}
+    let ctx = Context::new("test", classes, &program);
+    let module = ctx.codegen().compile()?;
 
-fn compile_to_ir_with_opts(source: &str, passes: Option<&str>) -> Anyhow<String> {
-    let ctx = create_context();
-    let module = test_compile(&ctx, source, passes)?;
+    if passes.is_some() {
+        module.run_passes(passes)?;
+    }
+
     Ok(module.to_string())
 }
 
@@ -29,14 +22,21 @@ fn compile_to_ir(source: &str) -> Anyhow<String> {
 }
 
 fn run_optimized(source: &str, passes: &str) -> Anyhow<i64> {
-    let ctx = create_context();
-    let module = test_compile(&ctx, source, Some(passes))?;
+    let mut program = parse(source)?;
+    let classes = typecheck(&mut program)?;
+    let program = optimize(program);
+    let ctx = Context::new("test", classes, &program);
+    let module = ctx.codegen().compile()?;
+    module.run_passes(Some(passes))?;
     module.execute()
 }
 
 fn run(source: &str) -> Anyhow<i64> {
-    let ctx = create_context();
-    let module = test_compile(&ctx, source, None)?;
+    let mut program = parse(source)?;
+    let classes = typecheck(&mut program)?;
+    let program = optimize(program);
+    let ctx = Context::new("test", classes, &program);
+    let module = ctx.codegen().compile()?;
     module.execute()
 }
 

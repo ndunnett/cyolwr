@@ -2,7 +2,10 @@ use std::path::PathBuf;
 
 use clap::Parser;
 
-use thirdlang::{Anyhow, compile, create_context, optimize, parse, typecheck};
+use thirdlang::{
+    Anyhow, CodeGenerator, Context, IntermediateRepresentation, ModuleContext, optimize, parse,
+    typecheck,
+};
 
 const ABOUT: &str = "Thirdlang Compiler";
 const LONG_ABOUT: &str = r"Thirdlang Compiler
@@ -72,16 +75,12 @@ fn main() -> Anyhow<()> {
             .and_then(|s| s.to_str())
             .unwrap_or("unknown");
 
-        let passes = if args.optimize {
-            args.passes
-                .as_deref()
-                .or(Some("default<O2>"))
-        } else {
-            None
-        };
+        let ctx = Context::new(name, classes, &program);
+        let module = ctx.codegen().compile()?;
 
-        let ctx = create_context();
-        let module = compile(&ctx, &program, classes, name, passes)?;
+        if args.optimize {
+            module.run_passes(args.passes.as_deref())?;
+        }
 
         if args.ir {
             println!("{module}");
